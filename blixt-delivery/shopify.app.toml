@@ -1,0 +1,36 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "412f23212540c65a71e3b94fa0b7acaa"
+name = "Blixt Delivery"
+handle = "blixt-delivery"
+application_url = "https://eagle-diving-dash-enabled.trycloudflare.com"
+embedded = true
+
+[build]
+include_config_on_deploy = true
+automatically_update_urls_on_dev = true
+
+[webhooks]
+api_version = "2025-04"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/uninstalled" ]
+  uri = "/webhooks/app/uninstalled"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/scopes_update" ]
+  uri = "/webhooks/app/scopes_update"
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "write_products"
+
+[auth]
+redirect_urls = [
+  "https://eagle-diving-dash-enabled.trycloudflare.com/auth/callback",
+  "https://eagle-diving-dash-enabled.trycloudflare.com/auth/shopify/callback",
+  "https://eagle-diving-dash-enabled.trycloudflare.com/api/auth/callback"
+]
+
+[pos]
+embedded = false
