@@ -1,7 +1,7 @@
 import { json } from "@remix-run/node";
 import { createClient } from "@supabase/supabase-js";
 import type { ActionFunctionArgs } from "@remix-run/node";
-import { generateLabelPDF } from "./generateLabe";
+import { generateLabelPDF } from "../utils/pdf.server";
 import { v4 as uuidv4 } from "uuid";
 import { Resend } from "resend";
 import { createShopifyFulfillment } from "./shopify-fulfillment";
