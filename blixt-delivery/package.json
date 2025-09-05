@@ -2,7 +2,7 @@
   "name": "blixt-delivery",
   "private": true,
   "scripts": {
-    "build": "remix vite:build",
+    "build": "prisma generate && remix vite:build",
     "dev": "PORT=4000 shopify app dev",
     "config:link": "shopify app config link",
     "generate": "shopify app generate",
@@ -16,7 +16,9 @@
     "shopify": "shopify",
     "prisma": "prisma",
     "graphql-codegen": "graphql-codegen",
-    "vite": "vite"
+    "vite": "vite",
+    "postinstall": "prisma generate"
+
   },
   "type": "module",
   "engines": {
@@ -24,12 +26,13 @@
   },
   "dependencies": {
     "@mapbox/mapbox-sdk": "^0.16.1",
-    "@prisma/client": "^6.2.1",
+    "@prisma/client": "6.9.0",
     "@remix-run/dev": "^2.16.1",
     "@remix-run/fs-routes": "^2.16.1",
     "@remix-run/node": "^2.16.1",
     "@remix-run/react": "^2.16.1",
     "@remix-run/serve": "^2.16.1",
+    "@remix-run/vercel": "^1.19.3",
     "@shopify/app-bridge-react": "^4.1.6",
     "@shopify/polaris": "^12.0.0",
     "@shopify/shopify-app-remix": "^3.7.0",
@@ -37,7 +40,6 @@
     "@supabase/supabase-js": "^2.50.0",
     "isbot": "^5.1.0",
     "pdf-lib": "^1.17.1",
-    "prisma": "^6.2.1",
     "qrcode": "^1.5.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -57,6 +59,7 @@
     "eslint-config-prettier": "^10.0.1",
     "prettier": "^3.2.4",
     "typescript": "^5.2.2",
+    "prisma": "6.9.0",
     "vite": "^6.2.2"
   },
   "workspaces": [
