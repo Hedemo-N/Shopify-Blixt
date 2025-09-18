@@ -1,5 +1,6 @@
 generator client {
   provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
 }
 
 
@@ -7,6 +8,7 @@ datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
+  schemas   = ["public","auth"]
 }
 
 model Session {
@@ -27,5 +29,5 @@ model Session {
   emailVerified Boolean?
   // @@map("session")  // (valfritt) om du vill att tabellnamnet ska vara "session" i DB
 
-   // ⬅️ Viktigt
+  @@schema("public") // ⬅️ Viktigt
 }

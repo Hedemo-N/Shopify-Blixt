@@ -2,7 +2,8 @@
   "name": "blixt-delivery",
   "private": true,
   "scripts": {
-    "build": "prisma generate && remix vite:build",
+     "postinstall": "prisma generate",
+    "build": "prisma migrate deploy && remix vite:build",
     "dev": "PORT=4000 shopify app dev",
     "config:link": "shopify app config link",
     "generate": "shopify app generate",
@@ -16,17 +17,15 @@
     "shopify": "shopify",
     "prisma": "prisma",
     "graphql-codegen": "graphql-codegen",
-    "vite": "vite",
-    "postinstall": "prisma generate"
+    "vite": "vite"
 
   },
   "type": "module",
-  "engines": {
-    "node": "^18.20 || ^20.10 || >=21.0.0"
-  },
+  "engines": { "node": ">=18" },
+
   "dependencies": {
     "@mapbox/mapbox-sdk": "^0.16.1",
-    "@prisma/client": "6.9.0",
+    "@prisma/client": "6.15.0",
     "@remix-run/dev": "^2.16.1",
     "@remix-run/fs-routes": "^2.16.1",
     "@remix-run/node": "^2.16.1",
@@ -59,7 +58,7 @@
     "eslint-config-prettier": "^10.0.1",
     "prettier": "^3.2.4",
     "typescript": "^5.2.2",
-    "prisma": "6.9.0",
+    "prisma": "6.15.0",
     "vite": "^6.2.2"
   },
   "workspaces": [
