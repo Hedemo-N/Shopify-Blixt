@@ -6,17 +6,24 @@ export async function generateLabelPDF(order: any, logoUrl?: string) {
   const pageWidth = 300;
   const pageHeight = 400;
 
+  // ✅ Säkert etikett-ID (fallbacks om order_id saknas)
+  const labelId =
+    order?.order_id ??
+    order?.shopify_order_id ??
+    order?.id ??
+    "UNKNOWN";
+
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([pageWidth, pageHeight]);
   const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
   // QR-kod → dataURL → bytes → embed
-  const qrDataUrl = await QRCode.toDataURL(String(order.order_id));
+  const qrDataUrl = await QRCode.toDataURL(String(labelId));
   const qrRes = await fetch(qrDataUrl);
   const qrImageBytes = new Uint8Array(await qrRes.arrayBuffer());
   const qrImage = await pdfDoc.embedPng(qrImageBytes);
 
-  // Logotyp via HTTP (från /public/logo.png)
+  // Logotyp via HTTP (från /public/logo.png) – valfritt
   let logoImage: any = null;
   let logoDims = { width: 0, height: 0 };
   if (logoUrl) {
@@ -42,7 +49,7 @@ export async function generateLabelPDF(order: any, logoUrl?: string) {
 
   if (order.order_type === "hemleverans") {
     page.drawText("Order ID:", { x: 20, y: 350, size: 25, font });
-    page.drawText(String(order.order_id), { x: 20, y: 320, size: 25, font });
+    page.drawText(String(labelId), { x: 20, y: 320, size: 25, font });
 
     page.drawText(`Namn: ${order.name ?? ""}`, { x: 20, y: 280, size: 15 });
     page.drawText(`Adress: ${order.address1 ?? ""}`, { x: 20, y: 260, size: 15 });
@@ -65,7 +72,7 @@ export async function generateLabelPDF(order: any, logoUrl?: string) {
     page.drawText("Ombud/Paketbox", { x: 20, y: 350, size: 20, font });
     page.drawText(String(order.ombud_name ?? ""), { x: 20, y: 310, size: 20, font });
     page.drawText("Order ID:", { x: 20, y: 275, size: 20, font });
-    page.drawText(String(order.order_id), { x: 20, y: 255, size: 20, font });
+    page.drawText(String(labelId), { x: 20, y: 255, size: 20, font });
 
     page.drawText(`Namn: ${order.name ?? ""}`, { x: 20, y: 235, size: 15 });
     page.drawText(`Adress: ${order.ombud_adress ?? ""}`, { x: 20, y: 210, size: 15 });
@@ -85,7 +92,7 @@ export async function generateLabelPDF(order: any, logoUrl?: string) {
     page.drawImage(qrImage, { x: pageWidth - 200, y: 15, width: 80, height: 80 });
   } else {
     page.drawText("Order ID:", { x: 20, y: 350, size: 20, font });
-    page.drawText(String(order.order_id), { x: 20, y: 330, size: 20, font });
+    page.drawText(String(labelId), { x: 20, y: 330, size: 20, font });
     if (logoImage) {
       page.drawImage(logoImage, {
         x: (pageWidth - logoDims.width) / 2,

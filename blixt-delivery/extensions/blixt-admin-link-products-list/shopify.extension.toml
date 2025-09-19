@@ -1,0 +1,10 @@
+[[extensions]]
+name   = "Blixt Delivery – Produktlista"
+uid = "35abcf98-bd6b-1eb2-4853-6c9bdca60617c01d0c93"
+type   = "admin_link"
+handle = "blixt-admin-link-products-list"
+
+# Visas på PRODUKT-LISTAN (More actions)
+[[extensions.targeting]]
+target = "admin.product-index.action.link"
+url    = "/app"     # <-- RELATIV
