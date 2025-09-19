@@ -1,12 +1,12 @@
+// app/routes/_index.tsx
 import type { HeadersFunction } from "@remix-run/node";
 import { Page, Layout, Card, Text, Button, InlineStack } from "@shopify/polaris";
 
-
 export const headers: HeadersFunction = () => ({
+  // Gör att sidan får bäddas in i Shopify admin
   "Content-Security-Policy":
     "frame-ancestors https://admin.shopify.com https://*.myshopify.com;",
 });
-
 
 export default function AppHome() {
   return (
@@ -19,14 +19,13 @@ export default function AppHome() {
               Här kopplar du din butik till Blixt och bokar leveranser.
             </Text>
 
-            <InlineStack gap="300" align="start" blockAlign="center" style={{ marginTop: 12 }}>
-              <Button url="/app/settings" variant="secondary">
-                Inställningar
-              </Button>
-              <Button url="/app/orders" variant="primary">
-                Boka leverans
-              </Button>
-            </InlineStack>
+            {/* Använd vanlig div för margin (Polaris-komponenter saknar style-prop) */}
+            <div style={{ marginTop: 12 }}>
+              <InlineStack gap="300" align="start" blockAlign="center">
+                <Button url="/settings" variant="secondary">Inställningar</Button>
+                <Button url="/orders" variant="primary">Boka leverans</Button>
+              </InlineStack>
+            </div>
           </Card>
         </Layout.Section>
       </Layout>
