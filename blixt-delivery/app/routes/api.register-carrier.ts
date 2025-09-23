@@ -24,7 +24,8 @@ export const loader: LoaderFunction = async ({ request }) => {
     const variables = {
       carrierService: {
         name: "Blixt Delivery",
-        callbackUrl: "https://3026-213-89-195-158.ngrok-free.app/api/shipping-rates",
+callbackUrl: "https://shopify-blixt.vercel.app/api/shipping-rates",
+
         serviceDiscovery: true,
         format: "json"
       }
