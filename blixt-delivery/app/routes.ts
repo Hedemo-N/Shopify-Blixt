@@ -18,6 +18,10 @@ export default [
   { path: "/api/register-carrier", file: "routes/api.register-carrier.ts" },
   { path: "/api/shipping-rates", file: "routes/api.shipping-rates.ts" },
 
+
+  { path: "/settings", file: "routes/settings.tsx" },
+{ path: "/orders",   file: "routes/orders.tsx" },
+
   // (Valfritt – om du har dem)
   // { path: "/additional", file: "routes/app.additional.tsx" },
   // { path: "/orders", file: "routes/orders.tsx" },
