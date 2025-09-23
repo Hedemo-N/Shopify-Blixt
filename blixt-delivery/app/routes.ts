@@ -1,17 +1,19 @@
 // app/routes.ts
 // @ts-nocheck
-export default function (defineRoutes) {
-  return defineRoutes((route) => {
-    // 👇 Start / ska rendera din app._index.tsx
-    route("/", "routes/app._index.tsx");
+// Den här appen använder array-baserad route-konfig.
 
-    // 👇 /app => redirect (om du har app/routes/app.tsx som redirect)
-    route("/app", "routes/app.tsx");
+export default [
+  // Startsidan – du sa att din fil heter app._index.tsx
+  { path: "/", file: "routes/app._index.tsx" },
 
-    // Webhooks (måste finnas om callbackUrl = "/webhooks")
-    route("/webhooks", "routes/webhooks.tsx");
+  // /app – alias/fallback (redirect-fil)
+  { path: "/app", file: "routes/app.tsx" },
 
-    // Valfritt: om du har en extra sida
-    // route("/additional", "routes/app.additional.tsx");
-  });
-}
+  // Webhook-endpoint (måste matcha callbackUrl i shopify.server.ts)
+  { path: "/webhooks", file: "routes/webhooks.tsx" },
+
+  // (Valfritt – lägg till när du skapar sidorna)
+  // { path: "/orders", file: "routes/orders.tsx" },
+  // { path: "/settings", file: "routes/settings.tsx" },
+  // { path: "/additional", file: "routes/app.additional.tsx" },
+];
