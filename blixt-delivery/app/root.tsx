@@ -1,18 +1,6 @@
 // app/root.tsx
-import type {
-  LinksFunction,
-  LoaderFunctionArgs,
-  HeadersFunction,
-} from "@remix-run/node";
-import {
-  Links,
-  Meta,
-  Outlet,
-  Scripts,
-  ScrollRestoration,
-  useLoaderData,
-  useRouteError,
-} from "@remix-run/react";
+import type { LoaderFunctionArgs, HeadersFunction, LinksFunction } from "@remix-run/node";
+import { Links, Meta, Outlet, Scripts, ScrollRestoration, useLoaderData, useRouteError } from "@remix-run/react";
 import { boundary } from "@shopify/shopify-app-remix/server";
 import { AppProvider } from "@shopify/shopify-app-remix/react";
 import { NavMenu } from "@shopify/app-bridge-react";
@@ -20,20 +8,24 @@ import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
 import { authenticate } from "./shopify.server";
 
 export const links: LinksFunction = () => [
-  { rel: "preconnect", href: "https://cdn.shopify.com/" },
-  { rel: "stylesheet", href: "https://cdn.shopify.com/static/fonts/inter/v4/styles.css" },
-  { rel: "stylesheet", href: polarisStyles },
+  { rel: "stylesheet", href: polarisStyles }
 ];
 
 export async function loader({ request }: LoaderFunctionArgs) {
-  // Säkrar inbäddning + session i admin
+  const url = new URL(request.url);
+
+  // ⬇️ Viktigt: kör INTE authenticate.admin på auth-vägar
+  if (url.pathname === "/auth/login" || url.pathname.startsWith("/auth/")) {
+    return { apiKey: process.env.SHOPIFY_API_KEY || "" };
+  }
+
+  // För alla andra sidor: säkra sessionen
   await authenticate.admin(request);
   return { apiKey: process.env.SHOPIFY_API_KEY || "" };
 }
 
 export default function Root() {
   const { apiKey } = useLoaderData<typeof loader>();
-
   return (
     <html lang="sv">
       <head>
@@ -43,19 +35,14 @@ export default function Root() {
         <Links />
       </head>
       <body>
-        {/* Global Polaris/App Bridge wrapper för hela appen */}
         <AppProvider isEmbeddedApp apiKey={apiKey}>
           <NavMenu>
             <a href="/" rel="home">Home</a>
             <a href="/orders">Boka leverans</a>
             <a href="/settings">Inställningar</a>
-            <a href="/additional">Additional page</a>
           </NavMenu>
-
-          {/* Här renderas dina sidor */}
           <Outlet />
         </AppProvider>
-
         <ScrollRestoration />
         <Scripts />
       </body>
@@ -63,8 +50,5 @@ export default function Root() {
   );
 }
 
-// Shopify behöver dessa för att bubbla upp rätt headers
-export function ErrorBoundary() {
-  return boundary.error(useRouteError());
-}
+export function ErrorBoundary() { return boundary.error(useRouteError()); }
 export const headers: HeadersFunction = (args) => boundary.headers(args);
