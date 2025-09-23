@@ -8,6 +8,7 @@ import {
 } from "@shopify/shopify-app-remix/server";
 import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma";
 import prisma from "./db.server";
+import { MemorySessionStorage } from "@shopify/shopify-app-session-storage-memory";
 
 // ⬇️ Lägg till dina beroenden (justera paths om dina filer ligger annorlunda)
 import { createClient } from "@supabase/supabase-js";
@@ -37,7 +38,7 @@ export const shopify = shopifyApp({
   scopes: process.env.SCOPES?.split(","),           // ex: read_orders,write_fulfillments,read_products
   appUrl: process.env.SHOPIFY_APP_URL || "",
   authPathPrefix: "/auth",
-  sessionStorage: new PrismaSessionStorage(prisma),
+  sessionStorage: new MemorySessionStorage(),
   distribution: AppDistribution.AppStore,
   future: { unstable_newEmbeddedAuthStrategy: true, removeRest: true },
   ...(process.env.SHOP_CUSTOM_DOMAIN
@@ -46,20 +47,22 @@ export const shopify = shopifyApp({
 
   webhooks: {
     // A) Avinstallation – rensa butikens data (justera tabellnamn vid behov)
-    APP_UNINSTALLED: {
-      deliveryMethod: DeliveryMethod.Http,
-      callbackUrl: "/webhooks",
-      callback: async (_topic, shop) => {
-        await prisma.$executeRawUnsafe(
-          `DELETE FROM "public"."Session" WHERE "shop" = $1`,
-          shop
-        );
-        await prisma.$executeRawUnsafe(
-          `DELETE FROM "public"."shopify_shops" WHERE "shop" = $1`,
-          shop
-        );
-      },
-    },
+  APP_UNINSTALLED: {
+  deliveryMethod: DeliveryMethod.Http,
+  callbackUrl: "/webhooks",
+  callback: async (_topic, shop) => {
+    try {
+      await prisma.$executeRawUnsafe(
+        `DELETE FROM "public"."shopify_shops" WHERE "shop" = $1`,
+        shop
+      );
+      // OBS: ta bort ev. rensning av "public"."Session"
+    } catch (e) {
+      console.warn("APP_UNINSTALLED cleanup warn:", e);
+    }
+  },
+},
+
 
     // B) GDPR (räcker att logga/svara 200)
     CUSTOMERS_DATA_REQUEST: {
@@ -84,18 +87,19 @@ export const shopify = shopifyApp({
       },
     },
 
-  APP_SCOPES_UPDATE: {
+APP_SCOPES_UPDATE: {
   deliveryMethod: DeliveryMethod.Http,
   callbackUrl: "/webhooks",
-  // Signaturen är: (topic, shop, body, webhookId) — ingen "session" här
-  callback: async (_t, shop, body: any, _webhookId) => {
+  // Signaturen: (topic, shop, body, webhookId)
+  callback: async (_topic, shop, body: any, _webhookId) => {
+    // Behåll gärna lite logg för felsökning
     const current = Array.isArray(body?.current) ? body.current : [];
-    await prisma.session.updateMany({
-      where: { shop },
-      data: { scope: current.join(",") },
-    });
+    console.log("APP_SCOPES_UPDATE", { shop, current });
+    // ⚠️ Viktigt: Inga DB-anrop här när vi kör MemorySessionStorage
+    // (ta bort/kommentera bort prisma.session.updateMany)
   },
 },
+
 
 
     // C) 💥 ORDERS_CREATE – din gamla route-action, nu som callback
