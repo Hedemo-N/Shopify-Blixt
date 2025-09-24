@@ -1,6 +1,6 @@
 // app/root.tsx
 import type { LoaderFunctionArgs, HeadersFunction, LinksFunction } from "@remix-run/node";
-import { Links, Meta, Outlet, Scripts, ScrollRestoration, useLoaderData, useRouteError } from "@remix-run/react";
+import { Links, Link, Meta, Outlet, Scripts, ScrollRestoration, useLoaderData, useRouteError } from "@remix-run/react";
 import { boundary } from "@shopify/shopify-app-remix/server";
 import { AppProvider } from "@shopify/shopify-app-remix/react";
 import { NavMenu } from "@shopify/app-bridge-react";
@@ -39,14 +39,14 @@ export default function Root() {
       </head>
       <body>
         <AppProvider isEmbeddedApp apiKey={apiKey}>
-          <NavMenu>
-            <a href="/" rel="home">Home</a>
-            <a href="/orders">Boka leverans</a>
-            <a href="/settings">Inställningar</a>
-            <a href="/api/register-carrier">Aktivera frakt</a>
-          </NavMenu>
-          <Outlet />
-        </AppProvider>
+  <NavMenu>
+    <Link to="/" rel="home">Home</Link>
+    <Link to="/orders">Boka leverans</Link>
+    <Link to="/settings">Inställningar</Link>
+    <Link to="/settings">Aktivera frakt</Link> {/* pekar till samma sida med knappen */}
+  </NavMenu>
+  <Outlet />
+</AppProvider>
         <ScrollRestoration />
         <Scripts />
       </body>
