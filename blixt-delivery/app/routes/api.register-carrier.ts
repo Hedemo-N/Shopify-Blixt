@@ -1,5 +1,4 @@
-// app/routes/api.register-carrier.ts
-import { json, redirect, type LoaderFunctionArgs } from "@remix-run/node";
+import { json, type LoaderFunctionArgs } from "@remix-run/node";
 import { createClient } from "@supabase/supabase-js";
 
 const CREATE_CARRIER_SERVICE = `
@@ -13,14 +12,13 @@ mutation carrierServiceCreate($carrierService: CarrierServiceInput!) {
 
 export async function loader({ request }: LoaderFunctionArgs) {
   try {
-    // 1) Hämta shop + access_token från Supabase
+    // Hämta shop + access_token från Supabase
     const supabase = createClient(
       process.env.SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // Om du har flera shops per user: välj den som matchar nuvarande butik.
-    // Här antar vi att appen är installerad i EN butik (din dev-butik).
+    // Välj senaste raden (justera om du har flera shops)
     const { data: row, error } = await supabase
       .from("shopify_shops")
       .select("shop, access_token")
@@ -29,15 +27,13 @@ export async function loader({ request }: LoaderFunctionArgs) {
       .single();
 
     if (error || !row?.shop || !row?.access_token) {
-      const msg = encodeURIComponent("Saknar shop/access_token i Supabase");
-      return redirect(`/settings?carrier=fail&msg=${msg}`);
+      return json({ success: false, error: "Saknar shop/access_token i Supabase" }, { status: 500 });
     }
 
-    const shop = row.shop; // t.ex. hedens-skor.myshopify.com
+    const shop = row.shop;            // t.ex. hedens-skor.myshopify.com
     const token = row.access_token;
-
-    // 2) Bygg callbackUrl dynamiskt
     const origin = new URL(request.url).origin; // https://shopify-blixt.vercel.app
+
     const variables = {
       carrierService: {
         name: "Blixt Delivery",
@@ -47,7 +43,6 @@ export async function loader({ request }: LoaderFunctionArgs) {
       },
     };
 
-    // 3) Kör Admin GraphQL med ditt sparade access_token
     const resp = await fetch(`https://${shop}/admin/api/2025-01/graphql.json`, {
       method: "POST",
       headers: {
@@ -59,16 +54,14 @@ export async function loader({ request }: LoaderFunctionArgs) {
     });
 
     const data = await resp.json();
+    const errs = data?.data?.carrierServiceCreate?.userErrors ?? [];
 
-    const errs = data?.data?.carrierServiceCreate?.userErrors;
-    if (errs?.length) {
-      const msg = encodeURIComponent(errs.map((e: any) => e.message).join(", "));
-      return redirect(`/settings?carrier=fail&msg=${msg}`);
+    if (errs.length) {
+      return json({ success: false, error: errs.map((e: any) => e.message).join(", ") }, { status: 400 });
     }
 
-    return redirect(`/settings?carrier=ok`);
+    return json({ success: true, result: data });
   } catch (e: any) {
-    const msg = encodeURIComponent(e?.message ?? String(e));
-    return redirect(`/settings?carrier=fail&msg=${msg}`);
+    return json({ success: false, error: e?.message ?? String(e) }, { status: 500 });
   }
 }

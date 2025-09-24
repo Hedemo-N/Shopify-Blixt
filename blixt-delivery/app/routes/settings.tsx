@@ -1,12 +1,32 @@
-// app/routes/settings.tsx
+import { useState } from "react";
 import { Page, Card, Button, Text } from "@shopify/polaris";
-import { useSearchParams } from "@remix-run/react";
 
 export default function Settings() {
-  const [params] = useSearchParams();
-  const ok = params.get("carrier") === "ok";
-  const fail = params.get("carrier") === "fail";
-  const msg = params.get("msg") ?? "";
+  const [status, setStatus] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function handleRegister() {
+    setLoading(true);
+    setStatus(null);
+    try {
+      const res = await fetch("/api/register-carrier"); // GET
+      const json = await res.json();
+      if (json?.success) {
+        const errs = json.result?.data?.carrierServiceCreate?.userErrors;
+        if (errs?.length) {
+          setStatus("❌ " + errs.map((e: any) => e.message).join(", "));
+        } else {
+          setStatus("✅ Carrier Service registrerad!");
+        }
+      } else {
+        setStatus("❌ " + (json?.error ?? "Okänt fel"));
+      }
+    } catch (e: any) {
+      setStatus("❌ " + (e?.message ?? String(e)));
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <Page title="Inställningar">
@@ -14,21 +34,14 @@ export default function Settings() {
         <Text as="p" variant="bodyMd">
           Registrera/uppdatera Blixt som fraktbärare i din butik.
         </Text>
-
         <div style={{ marginTop: 12 }}>
-          <Button url="/api/register-carrier" variant="primary">
+          <Button onClick={handleRegister} loading={loading} variant="primary">
             Aktivera frakt
           </Button>
         </div>
-
-        {ok && (
+        {status && (
           <div style={{ marginTop: 12 }}>
-            <Text as="p" variant="bodyMd">✅ Carrier Service registrerad!</Text>
-          </div>
-        )}
-        {fail && (
-          <div style={{ marginTop: 12 }}>
-            <Text as="p" variant="bodyMd">❌ {msg || "Kunde inte registrera."}</Text>
+            <Text as="p" variant="bodyMd">{status}</Text>
           </div>
         )}
       </Card>
