@@ -1,24 +1,51 @@
-import type { HeadersFunction } from "@remix-run/node";
-import { Page, Layout, Card, Text } from "@shopify/polaris";
-
-export const headers: HeadersFunction = () => ({
-  "Content-Security-Policy":
-    "frame-ancestors https://admin.shopify.com https://*.myshopify.com;",
-});
+// app/routes/settings.tsx
+import { useState } from "react";
+import { Page, Card, Button, Text } from "@shopify/polaris";
 
 export default function Settings() {
+  const [status, setStatus] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function handleRegister() {
+    setLoading(true);
+    setStatus(null);
+    try {
+      const res = await fetch("/api/register-carrier");
+      const json = await res.json();
+      if (json?.success) {
+        const errs = json.result?.data?.carrierServiceCreate?.userErrors;
+        if (errs?.length) {
+          setStatus("❌ " + errs.map((e: any) => e.message).join(", "));
+        } else {
+          setStatus("✅ Carrier Service registrerad!");
+        }
+      } else {
+        setStatus("❌ " + (json?.error ?? "Okänt fel"));
+      }
+    } catch (e: any) {
+      setStatus("❌ " + (e?.message ?? String(e)));
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <Page title="Inställningar">
-      <Layout>
-        <Layout.Section>
-          <Card>
-            <Text as="h2" variant="headingMd">Inställningar</Text>
-            <Text as="p" variant="bodyMd">
-              Här kommer dina Blixt-inställningar ligga. (Placeholder)
-            </Text>
-          </Card>
-        </Layout.Section>
-      </Layout>
+      <Card>
+        <Text as="p" variant="bodyMd">
+          Registrera/uppdatera Blixt som fraktbärare i din butik.
+        </Text>
+        <div style={{ marginTop: 12 }}>
+          <Button onClick={handleRegister} loading={loading} variant="primary">
+            Aktivera frakt
+          </Button>
+        </div>
+        {status && (
+          <div style={{ marginTop: 12 }}>
+            <Text as="p" variant="bodyMd">{status}</Text>
+          </div>
+        )}
+      </Card>
     </Page>
   );
 }
