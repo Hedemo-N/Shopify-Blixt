@@ -31,12 +31,10 @@ export default function AppHome() {
               </div>
 
               <InlineStack gap="300" align="start" blockAlign="center">
-                <Button url="/settings" variant="secondary">
-                  Inställningar
-                </Button>
-                <Button url="/orders" variant="primary">
-                  Boka leverans
-                </Button>
+                <Button url="/settings" variant="secondary">Inställningar</Button>
+  <Button url="/orders" variant="primary">Boka leverans</Button>
+  {/* ⬇️ NY knapp */}
+  <Button url="/api/register-carrier" variant="secondary">Aktivera frakt</Button>
               </InlineStack>
             </BlockStack>
           </Card>
