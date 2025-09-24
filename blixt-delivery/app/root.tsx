@@ -7,22 +7,25 @@ import { NavMenu } from "@shopify/app-bridge-react";
 import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
 import { authenticate } from "./shopify.server";
 
-export const links: LinksFunction = () => [
-  { rel: "stylesheet", href: polarisStyles }
-];
-
+// app/root.tsx
 export async function loader({ request }: LoaderFunctionArgs) {
   const url = new URL(request.url);
 
-  // ⬇️ Viktigt: kör INTE authenticate.admin på auth-vägar
+  // Släpp igenom auth-flödet
   if (url.pathname === "/auth/login" || url.pathname.startsWith("/auth/")) {
     return { apiKey: process.env.SHOPIFY_API_KEY || "" };
   }
 
-  // För alla andra sidor: säkra sessionen
+  // 🔓 Låt API/webhooks gå utan admin-auth (annars redirectas du till /auth/login)
+  if (url.pathname.startsWith("/api/") || url.pathname === "/webhooks") {
+    return { apiKey: process.env.SHOPIFY_API_KEY || "" };
+  }
+
+  // Allt annat säkras
   await authenticate.admin(request);
   return { apiKey: process.env.SHOPIFY_API_KEY || "" };
 }
+
 
 export default function Root() {
   const { apiKey } = useLoaderData<typeof loader>();
