@@ -2,24 +2,6 @@
 import { json, type LoaderFunctionArgs } from "@remix-run/node";
 import { createClient } from "@supabase/supabase-js";
 
-const CREATE_CARRIER_SERVICE = `
-mutation carrierServiceCreate($input: CarrierServiceCreateInput!) {
-  carrierServiceCreate(input: $input) {
-    carrierService {
-      id
-      name
-      callbackUrl
-      active
-      serviceDiscovery
-    }
-    userErrors {
-      field
-      message
-    }
-  }
-}
-`;
-
 export async function loader({ request }: LoaderFunctionArgs) {
   try {
     // 1) Hämta shop + access_token från Supabase
@@ -27,8 +9,6 @@ export async function loader({ request }: LoaderFunctionArgs) {
       process.env.SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
-
-    // Ta senaste posten (justera vid behov om du har flera shops)
     const { data: row, error } = await supabase
       .from("shopify_shops")
       .select("shop, access_token")
@@ -37,71 +17,86 @@ export async function loader({ request }: LoaderFunctionArgs) {
       .single();
 
     if (error || !row?.shop || !row?.access_token) {
-      return json(
-        { success: false, error: "Saknar shop eller access_token i Supabase." },
-        { status: 500 }
-      );
+      return json({ success: false, error: "Saknar shop/access_token i Supabase" }, { status: 500 });
     }
 
-    const shop = row.shop;                 // ex: hedens-skor.myshopify.com
+    const shop = row.shop;                  // ex: hedens-skor.myshopify.com
     const token = row.access_token;
     const origin = new URL(request.url).origin; // ex: https://shopify-blixt.vercel.app
+    const callbackUrl = `${origin}/api/shipping-rates`;
 
-    // 2) Variabler enligt rätt schema (input + enum JSON)
-    const variables = {
-      input: {
-        name: "Blixt Delivery",
-        callbackUrl: `${origin}/api/shipping-rates`,
-        serviceDiscovery: true,
-        active: true,
-        format: "JSON", // OBS: enum-värde, inte "json"
-      },
-    };
-
-    // 3) Kör Admin GraphQL med butiks-token
-    const resp = await fetch(`https://${shop}/admin/api/2025-01/graphql.json`, {
-      method: "POST",
+    // 2) Finns det redan en carrier service med vårt namn? (GET)
+    const listRes = await fetch(`https://${shop}/admin/api/2025-01/carrier_services.json`, {
       headers: {
         "X-Shopify-Access-Token": token,
         "Content-Type": "application/json",
-        Accept: "application/json",
+        "Accept": "application/json",
       },
-      body: JSON.stringify({ query: CREATE_CARRIER_SERVICE, variables }),
     });
-
-    // Om Shopify svarar med en icke-200, returnera texten för felsökning
-    if (!resp.ok) {
-      const text = await resp.text();
-      return json(
-        { success: false, error: `HTTP ${resp.status}: ${text}` },
-        { status: 502 }
-      );
+    if (!listRes.ok) {
+      const t = await listRes.text();
+      return json({ success: false, error: `List failed: ${listRes.status} ${t}` }, { status: 500 });
     }
+    const listJson = await listRes.json();
+    const existing = (listJson?.carrier_services || []).find((c: any) => c.name === "Blixt Delivery");
 
-    const data = await resp.json();
-
-    // 4) Hantera GraphQL errors + userErrors
-    if (Array.isArray(data.errors) && data.errors.length) {
-      return json(
-        { success: false, error: data.errors.map((e: any) => e.message).join(", ") },
-        { status: 400 }
+    // 3) Skapa eller uppdatera via REST
+    if (existing) {
+      // Uppdatera befintlig
+      const updateRes = await fetch(
+        `https://${shop}/admin/api/2025-01/carrier_services/${existing.id}.json`,
+        {
+          method: "PUT",
+          headers: {
+            "X-Shopify-Access-Token": token,
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+          },
+          body: JSON.stringify({
+            carrier_service: {
+              id: existing.id,
+              name: "Blixt Delivery",
+              callback_url: callbackUrl,
+              service_discovery: true,
+              format: "json",
+              active: true,
+            },
+          }),
+        }
       );
+      if (!updateRes.ok) {
+        const t = await updateRes.text();
+        return json({ success: false, error: `Update failed: ${updateRes.status} ${t}` }, { status: 500 });
+      }
+      const updateJson = await updateRes.json();
+      return json({ success: true, mode: "updated", result: updateJson });
+    } else {
+      // Skapa ny
+      const createRes = await fetch(`https://${shop}/admin/api/2025-01/carrier_services.json`, {
+        method: "POST",
+        headers: {
+          "X-Shopify-Access-Token": token,
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+        body: JSON.stringify({
+          carrier_service: {
+            name: "Blixt Delivery",
+            callback_url: callbackUrl,
+            service_discovery: true,
+            format: "json",
+            active: true,
+          },
+        }),
+      });
+      if (!createRes.ok) {
+        const t = await createRes.text();
+        return json({ success: false, error: `Create failed: ${createRes.status} ${t}` }, { status: 500 });
+      }
+      const createJson = await createRes.json();
+      return json({ success: true, mode: "created", result: createJson });
     }
-
-    const userErrors = data?.data?.carrierServiceCreate?.userErrors ?? [];
-    if (userErrors.length) {
-      return json(
-        { success: false, error: userErrors.map((e: any) => e.message).join(", ") },
-        { status: 400 }
-      );
-    }
-
-    // 5) Klart
-    return json({ success: true, result: data });
   } catch (e: any) {
-    return json(
-      { success: false, error: e?.message ?? String(e) },
-      { status: 500 }
-    );
+    return json({ success: false, error: e?.message ?? String(e) }, { status: 500 });
   }
 }
