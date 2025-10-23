@@ -39,6 +39,12 @@ export default function Settings() {
             Aktivera frakt
           </Button>
         </div>
+        <div style={{ marginTop: 12 }}>
+  <Button url="/api.debug-carriers" external>
+    Visa Carrier Services (debug)
+  </Button>
+</div>
+
         {status && (
           <div style={{ marginTop: 12 }}>
             <Text as="p" variant="bodyMd">{status}</Text>
