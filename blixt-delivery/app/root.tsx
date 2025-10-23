@@ -17,7 +17,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
   }
 
   // 🔓 Låt API/webhooks gå utan admin-auth (annars redirectas du till /auth/login)
-  if (url.pathname.startsWith("/api/") || url.pathname === "/webhooks") {
+  if (url.pathname.startsWith("/api") || url.pathname === "/webhooks") {
     return { apiKey: process.env.SHOPIFY_API_KEY || "" };
   }
 
@@ -44,6 +44,7 @@ export default function Root() {
     <Link to="/orders">Boka leverans</Link>
     <Link to="/settings">Inställningar</Link>
     <Link to="/settings">Aktivera frakt</Link> {/* pekar till samma sida med knappen */}
+    <a href="/api/register-carrier">Aktivera frakt</a>
   </NavMenu>
   <Outlet />
 </AppProvider>
