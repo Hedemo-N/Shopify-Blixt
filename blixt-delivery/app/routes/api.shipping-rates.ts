@@ -221,6 +221,15 @@ export const action: ActionFunction = async ({ request }) => {
       min_delivery_date: slotStart.toISOString(),
       max_delivery_date: slotEnd.toISOString(),
     },
+    {
+      service_name: `BLIXT 🍃🚲 beställ innan 15 få hem samma kväll`,
+      service_code: "hemleverans",
+      description: expressDescription,
+      total_price: String(homepriceevening),  // ← profilpris
+      currency: "SEK",
+      min_delivery_date: slotStart.toISOString(),
+      max_delivery_date: slotEnd.toISOString(),
+    },
   ];
 
   if (nearestLocker) {
