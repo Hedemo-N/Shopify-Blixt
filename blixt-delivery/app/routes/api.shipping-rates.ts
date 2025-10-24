@@ -1,4 +1,4 @@
-import { json } from "@remix-run/node";
+import { json, type ActionFunction } from "@remix-run/node";
 import type { LoaderFunction } from "@remix-run/node";
 import { createClient } from "@supabase/supabase-js";
 
@@ -8,7 +8,6 @@ const CLOSING_HOUR = 18;
 const MAPBOX_TOKEN = process.env.MAPBOX_TOKEN!;
 const supabaseUrl = process.env.SUPABASE_URL!;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY!;
-
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 const pad = (n: number) => n.toString().padStart(2, "0");
@@ -98,18 +97,57 @@ function distance(lat1: number, lon1: number, lat2: number, lon2: number) {
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
   const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) *
-      Math.cos(toRad(lat2)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+    Math.sin(dLon / 2) ** 2;
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
 
-export const action: LoaderFunction = async ({ request }) => {
+export const action: ActionFunction = async ({ request }) => {
   const now = new Date();
   const payload = await request.json();
+
+  // ------ (A) Hämta shop → profilpriser ------
+  const shopHeader = request.headers.get("x-shopify-shop-domain");
+  const shopDomain = shopHeader || payload?.rate?.shop || payload?.shop || null;
+
+  let homeprice2h = 9900; 
+  let homepriceevening = 6500;  // defaults
+  let lockerPrice = 4500;
+  let isActive = true;
+
+  if (shopDomain) {
+    // shopify_shops → user_id
+    const { data: shopRow } = await supabase
+      .from("shopify_shops")
+      .select("user_id")
+      .eq("shop", shopDomain)
+      .single();
+
+    const userId = shopRow?.user_id;
+    if (userId) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("pris_ombud, pris_hemkvall, pris_hem2h, active")
+        .eq("_id", userId)
+        .single();
+
+      if (profile) {
+        lockerPrice = profile.pris_ombud ?? lockerPrice;
+        homeprice2h = profile.pris_hem2h ?? homeprice2h;
+        homepriceevening = profile.pris_hemkvall ?? homepriceevening;
+        isActive = profile.active ?? isActive;
+      }
+    }
+  }
+
+  // Om profilen är inaktiv → visa inga alternativ
+  if (!isActive) {
+    return json({ rates: [] });
+  }
+
+  // ------ (B) Din befintliga logik ------
   const addressParts = payload.rate?.destination;
   const rawPostcode =
     addressParts?.postal_code ||
@@ -118,10 +156,7 @@ export const action: LoaderFunction = async ({ request }) => {
     "";
   const postcode = rawPostcode.replace(/\s/g, "");
 
-  console.log("Kundens postnummer:", rawPostcode, "utan mellanslag:", postcode);
-
   if (!ALLOWED_POSTCODES.includes(postcode)) {
-    console.log("🚫 Utanför område – ingen frakt: ", postcode);
     return json({ rates: [] });
   }
 
@@ -133,18 +168,19 @@ export const action: LoaderFunction = async ({ request }) => {
   if (address) {
     try {
       customerCoords = await geocodeAddress(address);
-      console.log("Kundens adress:", address);
-      console.log("Geokodade koordinater:", customerCoords);
-    } catch (err) {
-      console.log("Kunde inte geocoda adress:", err);
+    } catch {
+      // geocoding fail → kör vidare utan koordinater
     }
   }
 
-  const { data: lockers, error } = await supabase.from("paketskåp_ombud").select("*");
-  let nearestLocker = null;
+  const { data: lockers } = await supabase
+    .from("paketskåp_ombud")
+    .select("*");
+
+  let nearestLocker: any = null;
   let minDistance = Infinity;
 
-  if (!error && customerCoords && lockers?.length) {
+  if (customerCoords && lockers?.length) {
     const [customerLng, customerLat] = customerCoords;
     for (const locker of lockers) {
       const [lockerLat, lockerLng] = locker.lat_long.split(",").map(Number);
@@ -174,12 +210,13 @@ export const action: LoaderFunction = async ({ request }) => {
     expressDescription = `Cykelleverans vid öppning, mellan ${displayFrom}–${displayTo}`;
   }
 
-  const rates = [
+  // ------ (C) Bygg rates med profilpriser ------
+  const rates: any[] = [
     {
       service_name: `BLIXT 🍃🚲 Hem inom 2h`,
       service_code: "hemleverans",
       description: expressDescription,
-      total_price: "9900",
+      total_price: String(basePrice),  // ← profilpris
       currency: "SEK",
       min_delivery_date: slotStart.toISOString(),
       max_delivery_date: slotEnd.toISOString(),
@@ -189,15 +226,13 @@ export const action: LoaderFunction = async ({ request }) => {
   if (nearestLocker) {
     rates.push({
       service_name: `BLIXT 🍃🚲 Paketskåp (${nearestLocker.ombud_name})`,
-      service_code: `ombud_${nearestLocker.id}`, // 👈 t.ex. ombud_42
+      service_code: `ombud_${nearestLocker.id}`,
       description: `Cykelleverans till ${nearestLocker.ombud_adress ?? ""}`,
-      total_price: "4500",
+      total_price: String(lockerPrice), // ← profilpris
       currency: "SEK",
       min_delivery_date: now.toISOString(),
       max_delivery_date: new Date(now.getTime() + 24 * 3600 * 1000).toISOString(),
     });
-    
-    console.log("Närmaste skåp:", nearestLocker);
   }
 
   return json({ rates });
