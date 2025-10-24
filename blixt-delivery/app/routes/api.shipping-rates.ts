@@ -119,28 +119,40 @@ export const action: ActionFunction = async ({ request }) => {
 
   if (shopDomain) {
     // shopify_shops → user_id
-    const { data: shopRow } = await supabase
+const { data: shopRow, error: shopErr } = await supabase
       .from("shopify_shops")
       .select("user_id")
       .eq("shop", shopDomain)
       .single();
 
+      console.log("shopRow:", shopRow, "shopErr:", shopErr);
+
+
     const userId = shopRow?.user_id;
     if (userId) {
-      const { data: profile } = await supabase
+ const { data: profile, error: profErr } = await supabase
         .from("profiles")
         .select("pris_ombud, pris_hemkvall, pris_hem2h, active")
         .eq("_id", userId)
         .single();
+        console.log("profile:", profile, "profErr:", profErr);
 
       if (profile) {
-        lockerPrice = profile.pris_ombud ?? lockerPrice;
-        homeprice2h = profile.pris_hem2h ?? homeprice2h;
-        homepriceevening = profile.pris_hemkvall ?? homepriceevening;
-        isActive = profile.active ?? isActive;
-      }
+      // Om du lagrar i kronor, konvertera till öre:
+      const toOre = (v: any, fallback: number) => {
+        if (v === null || v === undefined) return fallback;
+        const n = Number(v);
+        // heuristik: om n < 1000 och har decimaler → troligen kronor → *100
+        if (!Number.isFinite(n)) return fallback;
+        return Number.isInteger(n) ? n : Math.round(n * 100);
+      };
+
+      lockerPrice       = toOre(profile.pris_ombud,    lockerPrice);
+      homeprice2h       = toOre(profile.pris_hem2h,    homeprice2h);
+      homepriceevening  = toOre(profile.pris_hemkvall, homepriceevening);
     }
   }
+}
 
   // Om profilen är inaktiv → visa inga alternativ
   if (!isActive) {
