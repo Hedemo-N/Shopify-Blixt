@@ -109,55 +109,57 @@ export const action: ActionFunction = async ({ request }) => {
   const payload = await request.json();
 
   // ------ (A) Hämta shop → profilpriser ------
-  const shopHeader = request.headers.get("x-shopify-shop-domain");
-  const shopDomain = shopHeader || payload?.rate?.shop || payload?.shop || null;
+ // ------ (A) Hämta shop → profilpriser ------
+const headers = request.headers;
+const shopHeader =
+  headers.get("x-shopify-shop-domain") ||
+  headers.get("X-Shopify-Shop-Domain") ||
+  headers.get("shopify-shop-domain") ||
+  null;
 
-  let homeprice2h = 9900; 
-  let homepriceevening = 6500;  // defaults
-  let lockerPrice = 4500;
-  let isActive = true;
+const shopDomain = shopHeader || payload?.rate?.shop || payload?.shop || null;
 
-  if (shopDomain) {
-    // shopify_shops → user_id
-const { data: shopRow, error: shopErr } = await supabase
-      .from("shopify_shops")
-      .select("user_id")
-      .eq("shop", shopDomain)
+let homeprice2h = 9900;      // defaults (öre)
+let homepriceevening = 6500;
+let lockerPrice = 4500;
+
+if (shopDomain) {
+  const { data: shopRow, error: shopErr } = await supabase
+    .from("shopify_shops")
+    .select("user_id")
+    .eq("shop", shopDomain)
+    .single();
+
+  console.log("shopRow:", shopRow, "shopErr:", shopErr);
+
+  const userId = shopRow?.user_id;
+  if (userId) {
+    const { data: profile, error: profErr } = await supabase
+      .from("profiles")
+      .select("pris_ombud, pris_hemkvall, pris_hem2h") // ⬅️ ta bort "active"
+      .eq("_id", userId)
       .single();
 
-      console.log("shopRow:", shopRow, "shopErr:", shopErr);
+    console.log("profile:", profile, "profErr:", profErr);
 
+    // Konvertera till öre om du lagrar i kronor
+    const toOre = (v: any, fallback: number) => {
+      if (v === null || v === undefined) return fallback;
+      const n = Number(v);
+      if (!Number.isFinite(n)) return fallback;
+      // Om värdet inte är heltal → anta kronor → *100
+      return Number.isInteger(n) ? n : Math.round(n * 100);
+    };
 
-    const userId = shopRow?.user_id;
-    if (userId) {
- const { data: profile, error: profErr } = await supabase
-        .from("profiles")
-        .select("pris_ombud, pris_hemkvall, pris_hem2h, active")
-        .eq("_id", userId)
-        .single();
-        console.log("profile:", profile, "profErr:", profErr);
-
-      if (profile) {
-      // Om du lagrar i kronor, konvertera till öre:
-      const toOre = (v: any, fallback: number) => {
-        if (v === null || v === undefined) return fallback;
-        const n = Number(v);
-        // heuristik: om n < 1000 och har decimaler → troligen kronor → *100
-        if (!Number.isFinite(n)) return fallback;
-        return Number.isInteger(n) ? n : Math.round(n * 100);
-      };
-
-      lockerPrice       = toOre(profile.pris_ombud,    lockerPrice);
-      homeprice2h       = toOre(profile.pris_hem2h,    homeprice2h);
-      homepriceevening  = toOre(profile.pris_hemkvall, homepriceevening);
+    if (profile) {
+      lockerPrice      = toOre(profile.pris_ombud,    lockerPrice);
+      homeprice2h      = toOre(profile.pris_hem2h,    homeprice2h);
+      homepriceevening = toOre(profile.pris_hemkvall, homepriceevening);
     }
   }
 }
 
-  // Om profilen är inaktiv → visa inga alternativ
-  if (!isActive) {
-    return json({ rates: [] });
-  }
+
 
   // ------ (B) Din befintliga logik ------
   const addressParts = payload.rate?.destination;
