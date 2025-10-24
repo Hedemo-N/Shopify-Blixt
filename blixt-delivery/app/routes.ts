@@ -10,5 +10,8 @@ export default [
   { path: "/settings", file: "routes/settings.tsx" },
   { path: "/orders",   file: "routes/orders.tsx" },
   { path: "/api/debug-carriers", file: "routes/api.debug-carriers.ts" },
+  { path: "/api/register-webhooks", file: "routes/api.register-webhooks.ts" },
+{ path: "/api/debug-webhooks",    file: "routes/api.debug-webhooks.ts" },
+
 
 ];
