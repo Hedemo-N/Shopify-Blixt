@@ -1,55 +1,70 @@
 import { useState } from "react";
-import { Page, Card, Button, Text } from "@shopify/polaris";
+import { Page, Card, Button, Text, InlineStack, BlockStack } from "@shopify/polaris";
 
 export default function Settings() {
   const [status, setStatus] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<"carrier" | "webhooks" | null>(null);
 
-  async function handleRegister() {
-    setLoading(true);
-    setStatus(null);
+  async function callJson(url: string, kind: "carrier" | "webhooks") {
     try {
-      const res = await fetch("/api/register-carrier"); // GET
+      setLoading(kind);
+      setStatus(null);
+      const res = await fetch(url); // GET
       const json = await res.json();
-      if (json?.success) {
-        const errs = json.result?.data?.carrierServiceCreate?.userErrors;
-        if (errs?.length) {
-          setStatus("❌ " + errs.map((e: any) => e.message).join(", "));
-        } else {
-          setStatus("✅ Carrier Service registrerad!");
-        }
+      // Försök läsa userErrors om de finns
+      const errs =
+        json?.result?.data?.carrierServiceCreate?.userErrors ||
+        json?.errors ||
+        json?.userErrors ||
+        [];
+      if (Array.isArray(errs) && errs.length) {
+        setStatus("❌ " + errs.map((e: any) => e.message || String(e)).join(", "));
       } else {
-        setStatus("❌ " + (json?.error ?? "Okänt fel"));
+        setStatus("✅ Klart: " + (json.ok || json.success ? "OK" : "Se svar i /api/debug*"));
       }
     } catch (e: any) {
       setStatus("❌ " + (e?.message ?? String(e)));
     } finally {
-      setLoading(false);
+      setLoading(null);
     }
   }
 
   return (
     <Page title="Inställningar">
       <Card>
-        <Text as="p" variant="bodyMd">
-          Registrera/uppdatera Blixt som fraktbärare i din butik.
-        </Text>
-        <div style={{ marginTop: 12 }}>
-          <Button onClick={handleRegister} loading={loading} variant="primary">
-            Aktivera frakt
-          </Button>
-        </div>
-        <div style={{ marginTop: 12 }}>
-  <Button url="/api/debug-carriers" external>
-    Visa Carrier Services (debug)
-  </Button>
-</div>
+        <BlockStack gap="300">
+          <Text as="p" variant="bodyMd">
+            Registrera/uppdatera Blixt som fraktbärare & webhooks i din butik.
+          </Text>
 
-        {status && (
-          <div style={{ marginTop: 12 }}>
-            <Text as="p" variant="bodyMd">{status}</Text>
-          </div>
-        )}
+          <InlineStack gap="200">
+            <Button
+              onClick={() => callJson("/api/register-carrier", "carrier")}
+              loading={loading === "carrier"}
+              variant="primary"
+            >
+              Aktivera frakt (Carrier)
+            </Button>
+
+            <Button
+              onClick={() => callJson("/api/register-webhooks", "webhooks")}
+              loading={loading === "webhooks"}
+              variant="primary"
+            >
+              Registrera webhooks
+            </Button>
+
+            <Button url="/api/debug-webhooks" external>
+              Visa webhooks (debug)
+            </Button>
+          </InlineStack>
+
+          {status && (
+            <Text as="p" variant="bodyMd">
+              {status}
+            </Text>
+          )}
+        </BlockStack>
       </Card>
     </Page>
   );

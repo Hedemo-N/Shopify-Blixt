@@ -43,8 +43,7 @@ export default function Root() {
     <Link to="/" rel="home">Home</Link>
     <Link to="/orders">Boka leverans</Link>
     <Link to="/settings">Inställningar</Link>
-    <Link to="/settings">Aktivera frakt</Link> {/* pekar till samma sida med knappen */}
-    <a href="/api/register-carrier">Aktivera frakt</a>
+    
   </NavMenu>
   <Outlet />
 </AppProvider>
