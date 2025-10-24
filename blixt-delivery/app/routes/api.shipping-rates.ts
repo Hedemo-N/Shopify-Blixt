@@ -7,8 +7,8 @@ const CLOSING_HOUR = 18;
 
 const MAPBOX_TOKEN = process.env.MAPBOX_TOKEN!;
 const supabaseUrl = process.env.SUPABASE_URL!;
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY!;
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const supabase_service_role = process.env.SUPABASE_SERVICE_ROLE_KEY!
+export const supabase = createClient(supabaseUrl, supabase_service_role);
 
 const pad = (n: number) => n.toString().padStart(2, "0");
 
