@@ -54,9 +54,14 @@ export default function Settings() {
               Registrera webhooks
             </Button>
 
-            <Button url="/api/debug-webhooks" external>
-              Visa webhooks (debug)
-            </Button>
+           <Button
+    url="/api/debug-webhooks"
+    external
+    target="_blank"
+    variant="secondary"
+  >
+    Visa Webhooks (debug)
+  </Button>
           </InlineStack>
 
           {status && (
