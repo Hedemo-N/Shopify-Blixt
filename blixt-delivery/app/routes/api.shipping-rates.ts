@@ -216,7 +216,7 @@ export const action: ActionFunction = async ({ request }) => {
       service_name: `BLIXT 🍃🚲 Hem inom 2h`,
       service_code: "hemleverans",
       description: expressDescription,
-      total_price: String(basePrice),  // ← profilpris
+      total_price: String(homeprice2h),  // ← profilpris
       currency: "SEK",
       min_delivery_date: slotStart.toISOString(),
       max_delivery_date: slotEnd.toISOString(),
