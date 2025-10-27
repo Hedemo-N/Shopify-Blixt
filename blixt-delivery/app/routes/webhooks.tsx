@@ -1,50 +1,65 @@
-// app/routes/webhooks.tsx
-import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { authenticate } from "../shopify.server";
+import crypto from "crypto";
+import { json } from "@remix-run/node";
+import { authenticate } from "../shopify.server"; // 🧠 behåll denna import!
 
-export async function loader(_args: LoaderFunctionArgs) {
-  return new Response("OK");
-}
+import type { ActionFunctionArgs } from "@remix-run/node";
 
 export async function action({ request }: ActionFunctionArgs) {
-  const startedAt = new Date().toISOString();
-  const topic = request.headers.get("x-shopify-topic") || "";
-  const shop = request.headers.get("x-shopify-shop-domain") || "";
-  const webhookId = request.headers.get("x-shopify-webhook-id") || "";
-  const hasHmac = !!request.headers.get("x-shopify-hmac-sha256");
-  const contentType = request.headers.get("content-type") || "";
-  const contentLength = request.headers.get("content-length") || "";
 
-  console.log("WEBHOOK: incoming", {
+  const startedAt = new Date().toISOString();
+  const topic = request.headers.get("x-shopify-topic");
+  const shop = request.headers.get("x-shopify-shop-domain");
+  const webhookId = request.headers.get("x-shopify-webhook-id");
+  const hmacHeader = request.headers.get("x-shopify-hmac-sha256");
+
+  const body = await request.text(); // OBS! Rå body behövs för HMAC
+  const secret = process.env.SHOPIFY_API_SECRET!;
+
+  console.log("WEBHOOK RAW DEBUG", {
     startedAt,
     topic,
     shop,
     webhookId,
-    hasHmac,
-    contentType,
-    contentLength,
+    hasHmac: !!hmacHeader,
+    secretLength: secret?.length,
+    bodyPreview: body.slice(0, 180),
   });
 
-  // (Valfritt) debugga payload utan att konsumera original-body
-  try {
-    if (process.env.DEBUG_WEBHOOKS === "1") {
-      const previewClone = request.clone();
-      const txt = await previewClone.text();
-      console.log("WEBHOOK: body preview", txt.slice(0, 500));
-    }
-  } catch (e) {
-    console.warn("WEBHOOK: preview read failed (ignored)", String(e));
+  // 🧮 Beräkna egen HMAC för jämförelse
+  const digest = crypto
+    .createHmac("sha256", secret)
+    .update(body, "utf8")
+    .digest("base64");
+
+  const matches = digest === hmacHeader;
+
+  console.log("WEBHOOK HMAC CHECK", {
+    matches,
+    digest,
+    hmacHeader,
+  });
+
+  // 🚫 Om fel signatur – stoppa direkt (401)
+  if (!matches) {
+    console.error("❌ WEBHOOK VERIFY FAILED — HMAC mismatch!");
+    return json({ ok: false, reason: "HMAC mismatch" }, { status: 401 });
   }
 
+  console.log("✅ WEBHOOK VERIFIED, forwarding to Shopify SDK...");
+
   try {
-    // Låt Shopify SDK verifiera HMAC och dispatcha till dina callbacks.
-    // Viktigt: returnera responsen den ger (kan vara 200/401 etc).
-    const res = await authenticate.webhook(request);
-    return res;
+    // 🧩 Låt SDK verifiera & dispatcha vidare till callbacks i shopify.server.ts
+    const context = await authenticate.webhook(request);
+console.log("✅ WEBHOOK SDK dispatched:", {
+  topic: context.topic,
+  shop: context.shop,
+  hasBody: "body" in context && !!(context as any).body,
+
+});
+return new Response("OK", { status: 200 });
+
   } catch (err: any) {
-    // SDK kan kasta ett Response-objekt (t.ex. vid verifieringsfel). Returnera det som är.
     if (err instanceof Response) {
-      // För tydligare logg
       console.error("WEBHOOK: SDK threw Response", {
         status: err.status,
         statusText: err.statusText,
@@ -55,15 +70,12 @@ export async function action({ request }: ActionFunctionArgs) {
       return err;
     }
 
-    // Annars är det ett riktigt fel från din callback-kod.
     console.error("WEBHOOK: verify/dispatch failed", {
       message: err?.message || String(err),
       topic,
       shop,
       webhookId,
     });
-
-    // 500 så Shopify kan retry:a (401 används normalt vid HMAC-fel)
     return new Response("Internal Error", { status: 500 });
   }
 }
