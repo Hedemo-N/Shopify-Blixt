@@ -15,6 +15,9 @@ export async function action({ request }: ActionFunctionArgs) {
 
   const rawBody = Buffer.from(await request.arrayBuffer());
 
+  console.log("RAW BODY BASE64", rawBody.toString("base64").slice(0,120));
+
+  
   console.log("WEBHOOK RAW DEBUG", {
     startedAt,
     topic,
