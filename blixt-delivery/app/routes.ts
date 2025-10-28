@@ -12,6 +12,7 @@ export default [
   { path: "/api/debug-carriers", file: "routes/api.debug-carriers.ts" },
   { path: "/api/register-webhooks", file: "routes/api.register-webhooks.ts" },
 { path: "/api/debug-webhooks",    file: "routes/api.debug-webhooks.ts" },
+{ path: "/api/delete-webhook", file: "routes/api.delete-webhook.ts" },
 
 
 ];
