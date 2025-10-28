@@ -1,1 +1,39 @@
+# ==========================
+# 🌱 Miljöfiler (håll hemliga!)
+# ==========================
 .env
+.env.local
+.env.*.local
+
+# ==========================
+# 🏗️ Bygg- och cache-filer
+# ==========================
+/build
+/dist
+/.cache
+
+# ==========================
+# 🧰 Loggar
+# ==========================
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ==========================
+# 📦 Node modules
+# ==========================
+node_modules/
+
+# ==========================
+# 💻 OS- och editorfiler
+# ==========================
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# ==========================
+# 🛍️ Shopify / Remix / Prisma
+# ==========================
+/prisma/dev.db
+/shopify.dev.yml
