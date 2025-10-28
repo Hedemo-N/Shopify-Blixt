@@ -1,4 +1,7 @@
 // app/shopify.server.ts
+import dotenv from "dotenv";
+dotenv.config(); // 👈 detta måste ligga först, innan allt annat!
+
 import "@shopify/shopify-app-remix/adapters/node";
 import {
   ApiVersion,
@@ -10,12 +13,13 @@ import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prism
 import prisma from "./db.server";
 import { MemorySessionStorage } from "@shopify/shopify-app-session-storage-memory";
 
-// ⬇️ Lägg till dina beroenden (justera paths om dina filer ligger annorlunda)
+// ⬇️ Lägg till dina beroenden
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
 import { v4 as uuidv4 } from "uuid";
-import { generateLabelPDF } from "./utils/pdf.server";          // <-- ändra om den ligger annorlunda
-import { createShopifyFulfillment } from "./utils/shopify-fulfillment"; // <-- ändra om den ligger annorlunda
+import { generateLabelPDF } from "./utils/pdf.server";
+import { createShopifyFulfillment } from "./utils/shopify-fulfillment";
+
 
 // Initiera Supabase & Resend (SRK = server-only!)
 const supabase = createClient(
