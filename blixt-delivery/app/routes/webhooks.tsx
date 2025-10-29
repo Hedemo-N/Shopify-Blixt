@@ -17,13 +17,15 @@ export async function action({ request }: ActionFunctionArgs) {
   const rawBody = Buffer.concat(chunks);
 console.log("RAW BODY FULL", rawBody.toString("base64"));
 
-  const generatedHash = crypto
-    .createHmac("sha256", process.env.SHOPIFY_API_SECRET!)
-    .update(rawBody)
-    .digest("base64");
+const generatedHash = crypto
+  .createHmac("sha256", process.env.SHOPIFY_API_SECRET!)
+  .update(rawBody.toString("utf8"), "utf8")
+  .digest("base64");
 
   const matches = generatedHash === hmacHeader;
   console.log("WEBHOOK HMAC CHECK", { matches, digest: generatedHash, hmacHeader });
+console.log("DIGEST HEX", Buffer.from(generatedHash, "base64").toString("hex"));
+console.log("HEADER HEX", Buffer.from(hmacHeader!, "base64").toString("hex"));
 
   if (!matches) {
     console.error("❌ WEBHOOK VERIFY FAILED — HMAC mismatch!");
